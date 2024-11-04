@@ -21,10 +21,20 @@ MONGO_USERNAME = os.environ.get('MONGO_USERNAME')
 MONGO_PASSWORD = os.environ.get('MONGO_PASSWORD')
 MONGO_URI = f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@mongodb.database.svc.cluster.local:27017/website_screenshots?authSource=admin'
 
-# Initialize MinIO and MongoDB clients
+def get_db_connection():
+    """Establishes and returns a MongoDB connection"""
+    try:
+        client = pymongo.MongoClient(MONGO_URI)
+        # Test the connection
+        client.admin.command('ismaster')
+        print("MongoDB connection successful!")
+        return client.website_screenshots
+    except Exception as e:
+        print(f"MongoDB connection failed: {e}")
+        raise
+
+# Initialize MinIO client
 minio_client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
-mongo_client = pymongo.MongoClient(MONGO_URI)
-collection = mongo_client['website_screenshots']['screenshots']
 
 # Create MinIO bucket if it doesn't exist
 if not minio_client.bucket_exists(MINIO_BUCKET_NAME):
@@ -46,7 +56,6 @@ def take_screenshot(url):
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument('--remote-debugging-port=9222')
     
-    # Use direct path to chromedriver
     driver = webdriver.Chrome(options=chrome_options)
     screenshot_filename = get_next_screenshot_filename()
     
@@ -67,21 +76,25 @@ def upload_to_minio(file_name):
 def store_metadata(url, minio_url):
     """Stores metadata for the screenshot in MongoDB."""
     try:
-        # Add debug print statements
-        print(f"Attempting to store metadata for URL: {url}")
-        print(f"MongoDB URI: {MONGO_URI}")
+        db = get_db_connection()
+        screenshots_collection = db.screenshots
         
         metadata = {
             "url": url,
+            "screenshot_url": minio_url,
             "timestamp": datetime.now()
         }
         
-        result = collection.insert_one(metadata)
+        result = screenshots_collection.insert_one(metadata)
         print(f"Successfully stored metadata with ID: {result.inserted_id}")
-        
+        return True
     except Exception as e:
         print(f"Error storing metadata: {str(e)}")
-        raise
+        return False
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/screenshot', methods=['POST'])
 def screenshot():
@@ -91,7 +104,10 @@ def screenshot():
         minio_url = upload_to_minio(screenshot_filename)
         
         # Store metadata in MongoDB
-        store_metadata(url, minio_url)
+        if store_metadata(url, minio_url):
+            print(f"Screenshot and metadata stored successfully for URL: {url}")
+        else:
+            print(f"Failed to store metadata for URL: {url}")
         
         return redirect(url_for('index'))
     except Exception as e:

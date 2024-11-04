@@ -30,4 +30,4 @@ jobs:
           file: ./App/Dockerfile  
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: tal5041996/screen_web:${{ github.sha }},tal5041996/screen_web:latest
+          tags: tal5041996/screen_web:latest
