@@ -66,32 +66,37 @@ def upload_to_minio(file_name):
 
 def store_metadata(url, minio_url):
     """Stores metadata for the screenshot in MongoDB."""
-    collection.insert_one({"url": url, "minio_url": minio_url, "timestamp": datetime.now()})
-
-@app.route('/')
-def index():
-    return render_template('index.html')
+    try:
+        # Add debug print statements
+        print(f"Attempting to store metadata for URL: {url}")
+        print(f"MongoDB URI: {MONGO_URI}")
+        
+        metadata = {
+            "url": url,
+            "timestamp": datetime.now()
+        }
+        
+        result = collection.insert_one(metadata)
+        print(f"Successfully stored metadata with ID: {result.inserted_id}")
+        
+    except Exception as e:
+        print(f"Error storing metadata: {str(e)}")
+        raise
 
 @app.route('/screenshot', methods=['POST'])
 def screenshot():
     url = request.form['url']
-    screenshot_filename = take_screenshot(url)
-    minio_url = upload_to_minio(screenshot_filename)
-    
-def store_metadata(url, minio_url):
-    """Stores metadata for the screenshot in MongoDB."""
-    metadata = {
-        "url": url,
-        "date_time": datetime.now()
-    }
-    collection.insert_one(metadata)
-
-# Add this new route to view metadata
-@app.route('/metadata')
-def view_metadata():
-    # Retrieve all metadata from MongoDB, sorted by date_time in descending order
-    metadata = collection.find({}, {'_id': 0, 'url': 1, 'date_time': 1}).sort('date_time', -1)
-    return render_template('metadata.html', metadata=metadata)
+    try:
+        screenshot_filename = take_screenshot(url)
+        minio_url = upload_to_minio(screenshot_filename)
+        
+        # Store metadata in MongoDB
+        store_metadata(url, minio_url)
+        
+        return redirect(url_for('index'))
+    except Exception as e:
+        print(f"Error in screenshot route: {str(e)}")
+        return str(e), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80, debug=True)
