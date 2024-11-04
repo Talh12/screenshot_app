@@ -75,6 +75,10 @@ kubectl apply -f K8S/minio.yaml
 
 3. **Setup Ingress and TLS**
 ```bash
+# Add and update NGINX Ingress repository
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
 # Install NGINX Ingress Controller
 helm install ingress-nginx ingress-nginx/ingress-nginx
 
