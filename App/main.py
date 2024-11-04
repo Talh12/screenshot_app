@@ -8,11 +8,11 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-# Initialize Flask app
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# Configuration for MinIO and MongoDB
+
 MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'localhost:9000')
 MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY')
 MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY')
@@ -21,22 +21,10 @@ MONGO_USERNAME = os.environ.get('MONGO_USERNAME')
 MONGO_PASSWORD = os.environ.get('MONGO_PASSWORD')
 MONGO_URI = f'mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@mongodb.database.svc.cluster.local:27017/website_screenshots?authSource=admin'
 
-def get_db_connection():
-    """Establishes and returns a MongoDB connection"""
-    try:
-        client = pymongo.MongoClient(MONGO_URI)
-        # Test the connection
-        client.admin.command('ismaster')
-        print("MongoDB connection successful!")
-        return client.website_screenshots
-    except Exception as e:
-        print(f"MongoDB connection failed: {e}")
-        raise
 
-# Initialize MinIO client
 minio_client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
 
-# Create MinIO bucket if it doesn't exist
+
 if not minio_client.bucket_exists(MINIO_BUCKET_NAME):
     minio_client.make_bucket(MINIO_BUCKET_NAME)
 
@@ -70,14 +58,15 @@ def upload_to_minio(file_name):
     """Uploads a screenshot to MinIO and returns the file URL."""
     minio_key = f"screenshots/{file_name}"
     minio_client.fput_object(MINIO_BUCKET_NAME, minio_key, file_name)
-    os.remove(file_name)  # Delete local copy after upload
+    os.remove(file_name)  
     return f"http://{MINIO_ENDPOINT}/{MINIO_BUCKET_NAME}/{minio_key}"
 
 def store_metadata(url, minio_url):
     """Stores metadata for the screenshot in MongoDB."""
     try:
-        db = get_db_connection()
-        screenshots_collection = db.screenshots
+        client = pymongo.MongoClient(MONGO_URI)
+        db = client.website_screenshots
+        collection = db.screenshots
         
         metadata = {
             "url": url,
@@ -85,7 +74,7 @@ def store_metadata(url, minio_url):
             "timestamp": datetime.now()
         }
         
-        result = screenshots_collection.insert_one(metadata)
+        result = collection.insert_one(metadata)
         print(f"Successfully stored metadata with ID: {result.inserted_id}")
         return True
     except Exception as e:
@@ -103,7 +92,7 @@ def screenshot():
         screenshot_filename = take_screenshot(url)
         minio_url = upload_to_minio(screenshot_filename)
         
-        # Store metadata in MongoDB
+       
         if store_metadata(url, minio_url):
             print(f"Screenshot and metadata stored successfully for URL: {url}")
         else:
@@ -115,4 +104,4 @@ def screenshot():
         return str(e), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=80, debug=True)
+    app.run(host='0.0.0.0', port=80)

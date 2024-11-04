@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: screen-web
-          image: tal5041996/screen_web:1  
+          image: tal5041996/screen_web:7
           imagePullPolicy: Always
           env:
             - name: MINIO_ENDPOINT
@@ -38,16 +38,21 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mongodb-secret
-                  namespace: database
                   key: username
             - name: MONGO_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mongodb-secret
-                  namespace: database
                   key: password
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
 
 ---
 apiVersion: v1
