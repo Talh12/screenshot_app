@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screenshot Metadata</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>Screenshot History</h1>
+    <table>
+        <tr>
+            <th>URL</th>
+            <th>Date and Time</th>
+        </tr>
+        {% for item in metadata %}
+        <tr>
+            <td>{{ item.url }}</td>
+            <td>{{ item.date_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p><a href="/">Back to Screenshot Page</a></p>
+</body>
+</html>

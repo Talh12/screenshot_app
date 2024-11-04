@@ -1,0 +1,5 @@
+Flask==2.0.1
+selenium==4.10.0
+pymongo==4.3.3
+minio==7.1.15
+Werkzeug==2.0.1

@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+  namespace: default  # Change to default namespace
+type: Opaque
+data:
+  accesskey: QURNSU5VU0VS  # base64-encoded value for "ADMINUSER"
+  secretkey: QURNSU5QQVNT  # base64-encoded value for "ADMINPASS"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: default  # Change to default namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: default  # Change to default namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio
+          args:
+            - server
+            - /data
+            - "--console-address=:9001"  # Ensure console is on port 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: accesskey
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: secretkey
+          ports:
+            - containerPort: 9000   # MinIO server port
+            - containerPort: 9001   # MinIO console port
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: default  # Change to default namespace
+spec:
+  type: NodePort  # Change to NodePort to access it externally
+  ports:
+    - name: minio-port   # Name for MinIO server port
+      port: 9000
+      targetPort: 9000
+      nodePort: 30000  # Access MinIO server
+    - name: minio-console-port  # Name for MinIO console port
+      port: 9001
+      targetPort: 9001
+      nodePort: 30001  # Access MinIO console
+  selector:
+    app: minio
