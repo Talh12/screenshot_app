@@ -1,15 +1,18 @@
-
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: screen-web
   namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: tal5041996/screen_web
+    argocd-image-updater.argoproj.io/screen-web.update-strategy: semver
+    argocd-image-updater.argoproj.io/screen-web.allow-tags: regexp:^[0-9]+$
 spec:
   project: default
   source:
-    repoURL: https://github.com/Talh12/screenshot_app.git  
+    repoURL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
     targetRevision: HEAD
-    path: K8S  
+    path: k8s
   destination:
     server: https://kubernetes.default.svc
     namespace: default
@@ -17,5 +20,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-    - CreateNamespace=true

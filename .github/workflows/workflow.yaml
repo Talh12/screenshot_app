@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./App
-          file: ./App/Dockerfile  
+          file: ./App/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: tal5041996/screen_web:latest
+          tags: tal5041996/screen_web:${{ github.run_number }}
